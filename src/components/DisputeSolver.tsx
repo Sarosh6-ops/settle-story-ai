@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Scale, Upload, Brain, CheckCircle, AlertTriangle, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import heroImage from '@/assets/hero-dispute-solver.jpg';
+import { ThemeToggle } from './theme-toggle';
 
 interface AnalysisResult {
   winner: string;
@@ -46,7 +47,6 @@ const DisputeSolver = () => {
     setResult(null);
 
     try {
-      // Simulate API call to backend
       const formData = new FormData();
       formData.append('yourStory', yourStory);
       formData.append('otherStory', otherStory);
@@ -57,31 +57,35 @@ const DisputeSolver = () => {
         }
       }
 
-      // For demo purposes, we'll simulate the API response
-      setTimeout(() => {
-        const mockResult: AnalysisResult = {
-          winner: Math.random() > 0.5 ? "Your Side" : "The Other Side",
-          reasoning: "Based on the analysis of both narratives and evidence provided, this decision considers the consistency of facts, the strength of supporting evidence, and the logical flow of events. The winning side presents a more coherent and well-supported argument with fewer contradictions.",
-          confidence: Math.floor(Math.random() * 30) + 70 // 70-100%
-        };
-        
-        setResult(mockResult);
-        setIsAnalyzing(false);
-        
-        toast({
-          title: "Analysis complete",
-          description: "The AI has finished analyzing your dispute.",
-        });
-      }, 3000);
+      // Call the backend API
+      const response = await fetch('http://localhost:3001/api/analyze', {
+        method: 'POST',
+        body: formData,
+      });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        throw new Error(errorData.error || 'Network response was not ok');
+      }
+
+      const data: AnalysisResult = await response.json();
+
+      setResult(data);
+
+      toast({
+        title: "Analysis complete",
+        description: "The AI has finished analyzing your dispute.",
+      });
     } catch (err) {
-      setError("Sorry, something went wrong. Please try again.");
-      setIsAnalyzing(false);
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+      setError(`Sorry, something went wrong: ${errorMessage}`);
       toast({
         title: "Error",
         description: "Failed to analyze the dispute. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -108,6 +112,9 @@ const DisputeSolver = () => {
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="absolute top-4 right-4">
+            <ThemeToggle />
+          </div>
           <div className="text-center">
             <div className="flex items-center justify-center mb-6">
               <Scale className="w-12 h-12 text-primary mr-4" />
